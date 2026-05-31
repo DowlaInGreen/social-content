@@ -1,0 +1,41 @@
+name: Tjedno generiranje sadržaja
+
+on:
+  schedule:
+    # Ponovljenik u 08:00
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      news:
+        description: 'Vijesti / teme za ovaj tjedan (jedna po retku)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instaliraj dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generiraj sadržaj
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CONTENT_NEWS: ${{ github.event.inputs.news || '' }}
+        run: python scripts/generate.py
+
+      - name: Commitaj novi content u pending
+        run: |
+          git config user.name "VSS Digital Bot"
+          git config user.email "bot@vssdigital.online"
+          git add content/pending/
+          git diff --staged --quiet && echo "Nema novog sadržaja" || \
+            (git commit -m "📝 Tjedni content generiran $(date +%Y-%m-%d)" && git push)
