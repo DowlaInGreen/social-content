@@ -19,6 +19,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 CONTENT_APPROVED = REPO_ROOT / "content" / "approved"
 CONTENT_POSTED = REPO_ROOT / "content" / "posted"
+CONTENT_MEDIA = REPO_ROOT / "content" / "media"
 
 
 def parse_post(filepath: Path) -> dict:
@@ -56,6 +57,11 @@ def parse_post(filepath: Path) -> dict:
             elif current_section == "image":
                 image_suggestion += line.strip() + " "
 
+    # Pronađi medijske fileove
+    stem = filepath.stem
+    image_path = CONTENT_MEDIA / f"{stem}.png"
+    video_path = CONTENT_MEDIA / f"{stem}.mp4"
+
     return {
         "filepath": filepath,
         "topic": topic,
@@ -63,6 +69,8 @@ def parse_post(filepath: Path) -> dict:
         "facebook": facebook.strip(),
         "instagram": instagram.strip(),
         "image_suggestion": image_suggestion.strip(),
+        "image_path": str(image_path) if image_path.exists() else None,
+        "video_path": str(video_path) if video_path.exists() else None,
     }
 
 
@@ -110,7 +118,7 @@ def main():
     print("▶ LinkedIn...", end=" ", flush=True)
     try:
         from scripts.linkedin import post_to_linkedin
-        result = post_to_linkedin(post["linkedin"])
+        result = post_to_linkedin(post["linkedin"], image_path=post.get("image_path"))
         print(f"✓ (ID: {result.get('post_id', '?')})")
         posted = True
     except Exception as e:
@@ -121,7 +129,7 @@ def main():
     print("▶ Facebook + Instagram...", flush=True)
     try:
         from scripts.facebook import post_all
-        results = post_all(post["facebook"])
+        results = post_all(post["facebook"], image_path=post.get("image_path"))
         for r in results:
             if r.get("success"):
                 print(f"   ✓ {r['platform']}: {r.get('post_id', '?')}")

@@ -23,6 +23,9 @@ jobs:
       - name: Instaliraj dependencies
         run: pip install -r requirements.txt
 
+      - name: Generiraj medije (slike + reels) ako nedostaju
+        run: python scripts/generate_media.py --no-video || true
+
       - name: Objavi na platforme
         env:
           LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
@@ -33,6 +36,6 @@ jobs:
         run: |
           git config user.name "VSS Digital Bot"
           git config user.email "bot@vssdigital.online"
-          git add content/posted/ content/approved/
+          git add content/posted/ content/approved/ content/media/
           git diff --staged --quiet && echo "Nista za objaviti" || \
             (git commit -m "📤 Objava objavljena $(date +%Y-%m-%d)" && git push)

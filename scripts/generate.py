@@ -195,12 +195,26 @@ def main():
     posts = generate_content(api_key, brand_dna, news_items)
     print(f"✓ Generirano {len(posts)} objava")
 
-    # Spremi
+    # Spremi .md fileove
     print(f"\n💾 Spremam u content/pending/...")
     saved = save_posts(posts)
 
     print(f"\n✅ Gotovo! {len(saved)} objava čeka tvoj pregled u content/pending/")
     print(f"   Pregledaj, uredi ako treba, pa premjesti u content/approved/")
+
+    # Generiraj medije (slike + reels) za pending content
+    print(f"\n🎬 Generiram medije (slike + reels)...")
+    media_script = REPO_ROOT / "scripts" / "generate_media.py"
+    if media_script.exists():
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, str(media_script)], capture_output=True, text=True, timeout=300
+        )
+        print(result.stdout)
+        if result.returncode != 0:
+            print(f"⚠ Media generation warnings:\n{result.stderr}")
+    else:
+        print("ℹ generate_media.py nije pronađen — preskačem generiranje medija")
 
 
 if __name__ == "__main__":
