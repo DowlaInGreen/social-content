@@ -13,7 +13,10 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+# Dodaj repo root u path za uvoz
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
 CONTENT_APPROVED = REPO_ROOT / "content" / "approved"
 CONTENT_POSTED = REPO_ROOT / "content" / "posted"
 
@@ -79,11 +82,19 @@ def archive_post(filepath: Path):
     print(f"  → Arhivirano u content/posted/{filepath.name}")
 
 
+def notify_failure(post, failed_platforms, error_msg=""):
+    """Ispiši upozorenje — kasnije ovdje možemo dodati Telegram/email notifikaciju."""
+    print(f"\n  ⚠️  Djelomično objavljeno: {', '.join(failed_platforms)} nisu uspjeli")
+    if error_msg:
+        print(f"  ⚠️  Greška: {error_msg}")
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY")
 
     print("📤 VSS Digital — Publisher")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
     post_file = get_next_post()
     if not post_file:
@@ -92,35 +103,54 @@ def main():
 
     post = parse_post(post_file)
     print(f"📄 Objava: {post['topic']}")
-    print(f"   File: {post_file.name}")
+    print(f"   File: {post_file.name}\n")
+
+    failed_platforms = []
+    posted = False
 
     # 1. LinkedIn
-    print("\n▶ LinkedIn...", end=" ", flush=True)
+    print("▶ LinkedIn...", end=" ", flush=True)
     try:
         from scripts.linkedin import post_to_linkedin
         result = post_to_linkedin(post["linkedin"])
-        print(f"✓ (ID: {result['post_id']})")
+        print(f"✓ (ID: {result.get('post_id', '?')})")
+        posted = True
     except Exception as e:
         print(f"✗ {e}")
-        print("   Nastavljam s ostalima...")
+        failed_platforms.append("LinkedIn")
 
     # 2. Facebook + Instagram
-    print("▶ Facebook + IG...", end=" ", flush=True)
+    print("▶ Facebook + Instagram...", flush=True)
     try:
         from scripts.facebook import post_all
         results = post_all(post["facebook"])
         for r in results:
-            print(f"✓ ({r['platform']}: {r['post_id']})", end=" ")
-        print()
+            if r.get("success"):
+                print(f"   ✓ {r['platform']}: {r.get('post_id', '?')}")
+                posted = True
+            else:
+                print(f"   ✗ {r['platform']}: {r.get('error', 'nepoznata greška')}")
+                failed_platforms.append(r["platform"])
     except Exception as e:
-        print(f"✗ {e}")
+        print(f"   ✗ Facebook/Instagram: {e}")
+        failed_platforms.append("Facebook/Instagram")
 
-    # 3. Arhiviraj
-    print("\n📦 Arhiviram...", end=" ", flush=True)
-    archive_post(post_file)
-    print("✓")
+    # 3. Arhiviraj samo ako je barem jedna platforma uspjela
+    print(f"\n📦 Arhiviram...", end=" ", flush=True)
+    if posted:
+        archive_post(post_file)
+        print("✓")
+        print(f"\n✅ Objava \"{post['topic']}\" obrađena i arhivirana!")
+    else:
+        print("⏸  Objava ostaje u approved/ (nijedna platforma nije uspjela)")
+        print(f"\n❌ Objava \"{post['topic']}\" nije objavljena ni na jednu platformu")
 
-    print(f"\n✅ Objava \"{post['topic']}\" objavljena i arhivirana!")
+    # Ako nešto nije uspjelo, ispiši upozorenje
+    if failed_platforms:
+        notify_failure(post, failed_platforms)
+
+    # Exit code: 0 ako je sve ok, 1 ako je nešto palo
+    sys.exit(0 if posted else 1)
 
 
 if __name__ == "__main__":
