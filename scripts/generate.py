@@ -78,11 +78,15 @@ Vrati u JSON formatu:
 ]}}
 """
 
+    # Use fcc-server proxy ako je dostupan, inače direktno na Anthropic
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+    api_version = os.environ.get("ANTHROPIC_VERSION", "2023-06-01")
+
     response = requests.post(
-        "https://api.anthropic.com/v1/messages",
+        f"{base_url}/v1/messages",
         headers={
             "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
+            "anthropic-version": api_version,
             "content-type": "application/json",
         },
         json={
