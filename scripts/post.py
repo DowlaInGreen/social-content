@@ -90,8 +90,6 @@ def notify_failure(post, failed_platforms, error_msg=""):
 
 
 def main():
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY")
-
     print("📤 VSS Digital — Publisher")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}")

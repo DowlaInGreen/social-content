@@ -2,7 +2,7 @@ name: Tjedno generiranje sadržaja
 
 on:
   schedule:
-    # Ponovljenik u 08:00
+    # Ponedjeljak u 08:00 (UTC 06:00)
     - cron: '0 6 * * 1'
   workflow_dispatch:
     inputs:
@@ -11,6 +11,9 @@ on:
         required: false
         default: ''
         type: string
+
+permissions:
+  contents: write
 
 jobs:
   generate:
